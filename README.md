@@ -3,118 +3,198 @@
 MSc dissertation code. Four villas share one PV array and one battery; different
 control "brains" are compared on cost, battery life and fairness.
 
-## Folders
+This page walks you through the first-time setup and the first simulation run, one step at a
+time. Do the steps in order. Commands are shown for **Windows** (PowerShell, the default
+terminal in VS Code), with the macOS / Linux version where it differs.
 
-| Folder | Contents |
+## Before you start
+
+You need an internet connection and a terminal opened **in the project folder**
+(`thesis-code`):
+
+- **In VS Code:** open the `thesis-code` folder (File → Open Folder), then choose
+  Terminal → New Terminal. The terminal opens in the project folder.
+- **Anywhere else:** open PowerShell and go to the folder, for example
+  `cd C:\Users\<you>\Documents\thesis-code`.
+
+Type each command below into that terminal and press Enter.
+
+## Step 1 — Install uv
+
+[uv](https://docs.astral.sh/uv/) is the tool that installs Python and all the packages this
+project needs. First check whether you already have it:
+
+```powershell
+uv --version
+```
+
+If it prints a version number (e.g. `uv 0.10.11`), go to Step 2. If it says *"uv is not
+recognized"*, install it:
+
+```powershell
+# Windows
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then **close VS Code (or the terminal) completely and open it again**, so the terminal can
+find `uv`. Run `uv --version` again to confirm.
+
+## Step 2 — Install the project's packages
+
+```powershell
+uv sync
+```
+
+This does everything in one go: downloads the right Python version if you don't have it,
+creates a private environment for this project in a folder called `.venv`, and installs every
+package into it. The first time it takes a minute or two. It ends with a list of installed
+packages, e.g. `+ pandas==...`, `+ pvlib==...`.
+
+You only need to run it again if the package list changes (for example after pulling someone
+else's changes).
+
+## Step 3 — Activate the virtual environment
+
+Activating tells this terminal to use the project's Python from `.venv`. Run the line for your
+terminal:
+
+| Terminal | Command |
 |---|---|
-| `config/` | `default.yaml` (all settings), `params/` (datasheets, tariffs, household shapes), `scenarios/` (variations) |
-| `src/sbess/` | the model: PV, homes, battery, simulator, billing, brains |
-| `scripts/` | download data, prepare data, validate PV, export HOMER inputs |
-| `tests/` | automatic checks (`pytest`) |
-| `data/raw`, `data/processed` | downloaded and cleaned data (created by the scripts) |
-| `results/` | one folder per run, including the exact config used |
-| `thesis/` | writing and figures |
-| `DECISIONS.md` | every modelling choice and its source → methodology chapter |
-| `pyproject.toml`, `uv.lock` | package list and the exact locked versions (commit both) |
-| `.python-version` | Python version uv uses for this project (3.13) |
+| Windows PowerShell (VS Code default) | `.venv\Scripts\Activate.ps1` |
+| Windows Command Prompt (cmd) | `.venv\Scripts\activate.bat` |
+| Git Bash on Windows | `source .venv/Scripts/activate` |
+| macOS / Linux | `source .venv/bin/activate` |
 
-## Setup (once)
+It worked if the prompt now starts with **`(sbess)`**, like this:
 
-The project uses [uv](https://docs.astral.sh/uv/) to manage Python, the virtual environment
-and packages. `uv.lock` pins every package version, so every machine gets an identical setup.
-
-1. **Install uv** (skip if `uv --version` already works):
-
-   ```bash
-   # Windows (PowerShell)
-   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-   # macOS / Linux
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   ```
-
-   Open a new terminal afterwards so `uv` is on the PATH.
-
-2. **Create the environment and install packages** from the project folder:
-
-   ```bash
-   uv sync
-   ```
-
-   This downloads Python 3.13 if it isn't installed, creates `.venv/`, and installs the
-   Weeks 1–3 packages, `pytest`, and this project (`sbess`) in editable mode.
-
-3. **Check that everything works:**
-
-   ```bash
-   uv run pytest                   # should report all tests passed
-   ```
-
-4. **Activate the virtual environment (optional).** Once activated, `python` and `pytest` in
-   that terminal use the project's `.venv`, so you can type `python run.py` instead of
-   `uv run run.py`. Run the line for your terminal from the project folder:
-
-   | Terminal | Activate |
-   |---|---|
-   | Windows PowerShell (VS Code default) | `.venv\Scripts\Activate.ps1` |
-   | Windows Command Prompt (cmd) | `.venv\Scripts\activate.bat` |
-   | Git Bash on Windows | `source .venv/Scripts/activate` |
-   | macOS / Linux | `source .venv/bin/activate` |
-
-   The prompt then starts with `(sbess)`. To check, run `python -c "import sbess"`, which
-   should print nothing. Activation only lasts for that terminal, so repeat it in every new
-   one. Type `deactivate` to leave.
-
-   If PowerShell says *"running scripts is disabled on this system"*, allow local scripts
-   once, then activate again:
-
-   ```powershell
-   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-   ```
-
-   VS Code can activate it for you: press Ctrl+Shift+P → "Python: Select Interpreter" → choose
-   `.venv\Scripts\python.exe`. Every new VS Code terminal then activates the environment
-   automatically.
-
-Later weeks need extra packages, kept in optional groups so the first install stays small:
-
-```bash
-uv sync --group forecast        # Weeks 4–5: scikit-learn, xgboost, torch
-uv sync --group mpc             # Weeks 6–7: cvxpy, highspy
-uv sync --all-groups            # everything
+```text
+(sbess) PS C:\Users\<you>\Documents\thesis-code>
 ```
 
-Note: a plain `uv sync` removes any group you didn't ask for, so repeat the flags (or use
-`--all-groups`) once you need them.
+Activation only lasts for that terminal window. **Every time you open a new terminal, activate
+again** before running anything. To stop, type `deactivate`.
 
-**Running commands.** Put `uv run` in front of any command. It uses the project's `.venv`
-and syncs it first if `pyproject.toml` changed, so you never need to activate anything. In an
-activated terminal (step 4) you can drop the `uv run` prefix, but run `uv sync` yourself
-after changing packages.
+If PowerShell says *"running scripts is disabled on this system"*, run this once, then try
+activating again:
 
-**Adding or removing a package:** `uv add <package>` (or `uv add --group forecast <package>`),
-`uv remove <package>`. Both update `pyproject.toml` and `uv.lock`. Don't edit versions by hand.
-
-## Weeks 1–2 workflow
-
-```bash
-uv run scripts/download_data.py       # NASA POWER, PVGIS, Open-Meteo -> data/raw
-uv run scripts/prepare_data.py        # clean hourly files + timestamp check -> data/processed
-uv run scripts/validate_pv.py         # pvlib vs PVGIS, monthly and annual
-uv run run.py                         # grid-only, PV-only and Brain A for the default setup
-uv run scripts/export_homer.py        # 8760-hour files for the HOMER Pro cross-check
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
-No internet? `uv run run.py --scenario synthetic_test` runs everything on synthetic weather
-(pipeline test only — never use those numbers in the thesis).
+Tip for VS Code: press Ctrl+Shift+P, type **Python: Select Interpreter**, and choose
+`.venv\Scripts\python.exe`. After that, every new VS Code terminal activates automatically.
 
-## Changing settings
+## Step 4 — Check that the installation works
 
-```bash
-uv run run.py --scenario pw3_lfp                                  # use a scenario file
-uv run run.py --set battery.units=2                               # one-off change
-uv run run.py --set tariff.name=tou_hypothetical --set tariff.export_mode=no_credit
-uv run run.py --set "battery.spec_override={round_trip_efficiency: 0.88}"
+```powershell
+pytest
 ```
 
-Misspelt keys are rejected with an error. Each run folder contains `config_used.yaml`,
-`summary.json`, hourly `timeseries_<case>.csv` and monthly `bills_<case>.csv`.
+This runs the automatic checks. The last line should say something like
+**`23 passed`**. If anything says `failed`, stop here and fix it before going on.
+
+## Step 5 — Download the data
+
+```powershell
+python scripts/download_data.py
+```
+
+Downloads a year of Dubai weather (NASA POWER), a reference solar output (PVGIS) and archived
+weather forecasts (Open-Meteo) into `data/raw/`. It takes under a minute. Each source prints
+`saved: <file name>`. Running it again skips files you already have.
+
+## Step 6 — Prepare the data
+
+```powershell
+python scripts/prepare_data.py
+```
+
+Cleans the downloads into hourly tables in `data/processed/`. Check this line in the output:
+
+```text
+solar-noon check: GHI centre is +0.01 h from solar noon -> OK
+```
+
+It must end in **`OK`**. That confirms the weather timestamps line up with the sun. It is
+normal to see `forecast_previous_runs_2023.csv (0 complete hours)`, because that forecast
+archive only starts in 2024.
+
+## Step 7 — Check the solar model
+
+```powershell
+python scripts/validate_pv.py
+```
+
+Compares this project's solar-panel model with PVGIS, an independent EU tool, month by month.
+The last lines look like:
+
+```text
+Annual: pvlib 51,236 kWh (1,601 kWh/kWp) | PVGIS 55,602 kWh (1,738 kWh/kWp) | diff -7.9 %
+saved ...\results\pv_validation_2023.csv
+```
+
+An annual difference within about ±10 % is fine.
+
+## Step 8 — Run the simulation
+
+```powershell
+python run.py
+```
+
+Simulates one year for three cases and prints each case's total yearly electricity bill for
+the four homes:
+
+- `grid_only`: no solar, no battery (the reference)
+- `pv_only`: shared solar panels, no battery
+- `brain_A`: solar panels plus battery, run by the simple rule-based controller
+
+Expected output (your numbers should be close):
+
+```text
+   grid_only    bill       44,469 AED
+   pv_only      bill       26,949 AED
+   brain_A      bill       27,152 AED
+```
+
+The results are saved in a new folder `results/<date-time>_default/`:
+
+| File | What it contains |
+|---|---|
+| `summary.json` | yearly totals for each case: bills per home, energy, savings |
+| `bills_<case>.csv` | monthly bill for each home |
+| `timeseries_<case>.csv` | hour-by-hour energy flows (8,760 rows) |
+| `home_loads_kw.csv` | hourly electricity demand of each home |
+| `config_used.yaml` | the exact settings used, so the run can be repeated |
+
+## Step 9 — Export files for HOMER Pro
+
+```powershell
+python scripts/export_homer.py
+```
+
+Writes four one-value-per-hour files (load, sunlight, temperature, solar output) to
+`results/homer_inputs/`. These are loaded into HOMER Pro to cross-check the simulation.
+Skip this step if you are not doing the HOMER comparison.
+
+## Next time you open the project
+
+Setup is done. Each new session you only need to:
+
+1. Open a terminal in the project folder.
+2. Activate the environment (Step 3), and check for `(sbess)` at the start of the prompt.
+3. Run what you need, e.g. `python run.py`.
+
+## If something goes wrong
+
+| Message | Fix |
+|---|---|
+| `uv is not recognized` | Close and reopen VS Code / the terminal after installing uv (Step 1). |
+| `running scripts is disabled on this system` | Run the `Set-ExecutionPolicy` command in Step 3. |
+| `ModuleNotFoundError: No module named ...` | The environment isn't active: look for `(sbess)` and redo Step 3. If it is active, run `uv sync`. |
+| `weather_2023.csv not found` | Run Steps 5 and 6 first. |
+| No internet connection | `python run.py --scenario synthetic_test` runs on made-up weather to test that the code works. **Never use those numbers in the thesis.** |
