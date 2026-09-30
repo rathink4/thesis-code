@@ -15,8 +15,8 @@ dependencies = [
     "rainflow>=3.2",
 ]
 
-# Installed with `uv sync --group <name>` or `uv sync --all-groups`.
-# `dev` is installed by a plain `uv sync`.
+# Groups listed in [tool.uv] default-groups are installed by a plain `uv sync`;
+# the others need `uv sync --group <name>` or `uv sync --all-groups`.
 [dependency-groups]
 dev = [
     "pytest>=8.0",
@@ -30,6 +30,9 @@ mpc = [               # Weeks 6-7
     "cvxpy>=1.5",
     "highspy>=1.7",
 ]
+
+[tool.uv]
+default-groups = ["dev", "forecast"]
 
 [build-system]
 requires = ["setuptools>=68"]

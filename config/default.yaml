@@ -19,7 +19,7 @@ site:
   altitude_m: 5
 
 simulation:
-  year: 2023                      # [VERIFY] see DECISIONS D-007 (day-ahead forecasts only exist from 2024)
+  year: 2025                      # DECISIONS D-007: real day-ahead forecasts exist from 2024, so train on 2024, simulate 2025
   timestep_h: 1.0
   weather_source: nasa_power      # nasa_power | synthetic   ([TEST] synthetic = no internet needed)
   energy_balance_tolerance_kwh: 1.0e-6
@@ -43,6 +43,7 @@ data:
     hourly_variables: [temperature_2m, shortwave_radiation, direct_normal_irradiance,
                        diffuse_radiation, cloud_cover, relative_humidity_2m, wind_speed_10m]
     lead_days: 1                  # day-ahead forecast = value issued 24 h earlier
+    radiation_shift_h: -1         # Open-Meteo radiation is the mean of the hour BEFORE the stamp; move to hour-start (D-016)
 
 # --- Solar PV (shared array, one AC connection) ----------------------------
 pv:
@@ -118,6 +119,35 @@ tariff:
 allocation:
   method: pro_rata_hourly_load    # each hour, homes share grid import in proportion to their load
   export_shares: [0.25, 0.25, 0.25, 0.25]   # who is credited for exported energy (ownership)
+
+# --- Forecasting (Weeks 4-5) -------------------------------------------------
+# Day-ahead forecasts of community load and PV, issued every hour for the next horizon_h hours.
+# Test year = simulation.year: its forecasts are what the brains use and are never seen in training.
+forecast:
+  train_years: [2024]             # forecasters learn from these years, minus the validation part:
+  validation:                     # held out from the training years, only to decide when to stop training
+    method: blocks                # blocks: every Nth calendar week (covers all seasons) | tail: from `from` to the end
+    every_nth_week: 5             # blocks: ISO weeks 5, 10, ..., 50 -> about 20 % of the year
+    from: "2024-11-01"            # tail only
+  nwp_source: previous_runs       # previous_runs: real day-ahead weather forecasts | historical_forecast: [TEST] near-perfect | synthetic: [TEST]
+  horizon_h: 24
+  models: [persistence, xgboost, lstm]
+  targets: [load, pv]
+  forecast_dir: data/processed/forecasts
+  xgboost:                        # [ASSUMPTION] common settings, not tuned beyond early stopping
+    n_estimators: 1000
+    max_depth: 6
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    early_stopping_rounds: 50
+  lstm:                           # [ASSUMPTION] small network; one year of hourly data is not much
+    history_h: 48                 # hours of past observations the network reads
+    hidden: 64
+    epochs: 60
+    batch_size: 64
+    learning_rate: 1.0e-3
+    patience: 8                   # stop when validation error has not improved for this many epochs
 
 # --- What run.py simulates ----------------------------------------------------
 run:

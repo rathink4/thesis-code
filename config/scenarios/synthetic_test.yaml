@@ -2,3 +2,5 @@
 # Results from this scenario are NOT for the thesis.
 simulation:
   weather_source: synthetic
+forecast:
+  nwp_source: synthetic

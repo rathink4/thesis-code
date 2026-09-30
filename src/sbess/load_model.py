@@ -38,7 +38,8 @@ def build_loads(weather: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     is_weekend = np.isin(idx.dayofweek.to_numpy(), hc["weekend_days"])
     t_lag = _lagged_temperature(weather["temp_air"], hc["thermal_lag_h"])
     degree = np.clip(t_lag - hc["balance_temp_c"], 0.0, None)
-    rng = np.random.default_rng(cfg["project"]["seed"])
+    # different noise every year, so a forecaster trained on one year cannot memorise the next
+    rng = np.random.default_rng([cfg["project"]["seed"], int(idx[0].year)])
     hours_per_year = len(idx) * cfg["simulation"]["timestep_h"]
 
     loads = {}
