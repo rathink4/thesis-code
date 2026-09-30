@@ -5,6 +5,7 @@ Order of precedence (later wins):
 
 Then library entries are resolved:
     battery.model  -> config/params/batteries.yaml   (+ battery.spec_override)
+                   -> its degradation_model in config/params/degradation.yaml
     tariff.name    -> config/params/tariffs.yaml     (+ tariff.spec_override)
     homes archetypes -> config/params/load_archetypes.yaml
 
@@ -90,6 +91,17 @@ def resolve_library(cfg: dict, config_dir: Path = CONFIG_DIR) -> dict:
     spec = copy.deepcopy(batteries[model])
     spec.update(cfg["battery"].get("spec_override") or {})
     cfg["battery"]["spec"] = spec
+
+    ageing = _read_yaml(params / "degradation.yaml")
+    dmodel = spec["degradation_model"]
+    if dmodel not in ageing:
+        raise ConfigError(f"degradation_model '{dmodel}' not in degradation.yaml ({list(ageing)})")
+    cfg["battery"]["ageing"] = {"model": dmodel, **copy.deepcopy(ageing[dmodel])}
+    placement = cfg["battery"]["placement"]
+    if placement not in cfg["battery"]["thermal"]["placements"]:
+        raise ConfigError(f"battery.placement '{placement}' not in battery.thermal.placements")
+    if cfg["degradation"]["lifetime_method"] not in ("extrapolate", "multi_year"):
+        raise ConfigError("degradation.lifetime_method must be extrapolate | multi_year")
 
     tariffs = _read_yaml(params / "tariffs.yaml")
     name = cfg["tariff"]["name"]

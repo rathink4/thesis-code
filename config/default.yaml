@@ -22,7 +22,6 @@ simulation:
   year: 2023                      # [VERIFY] see DECISIONS D-007 (day-ahead forecasts only exist from 2024)
   timestep_h: 1.0
   weather_source: nasa_power      # nasa_power | synthetic   ([TEST] synthetic = no internet needed)
-  lifetime_method: extrapolate    # extrapolate | multi_year  (used from Week 3)
   energy_balance_tolerance_kwh: 1.0e-6
 
 # --- Data download settings --------------------------------------------------
@@ -91,8 +90,22 @@ battery:
   soc_init: 0.5
   efficiency_split: symmetric     # round-trip -> charge & discharge each sqrt(RTE)
   self_discharge_per_h: 0.0       # [ASSUMPTION] not on datasheet
-  placement: outdoor_garage       # outdoor_garage | indoor  (used by thermal model, Week 3)
+  placement: outdoor_garage       # outdoor_garage | indoor  — sets the air temperature around the battery
   spec_override: {}               # override any datasheet field, e.g. {round_trip_efficiency: 0.88}
+  thermal:                        # battery temperature model, see DECISIONS D-012
+    placements:
+      outdoor_garage: {ambient: outdoor, offset_c: 2.0, lag_h: 2.0}   # [ASSUMPTION] unconditioned garage: outdoor air, lagged, slightly warmer
+      indoor:         {ambient: fixed, temp_c: 24.0}                  # [ASSUMPTION] air-conditioned room
+    heat_capacity_kj_per_kg_k: 1.0      # [ASSUMPTION] typical for Li-ion packs (0.9-1.1)
+    r_th_k_per_kw: 10.0                 # [ASSUMPTION] per unit: 1 kW of loss heat -> +10 K above ambient (fan-cooled enclosure)
+    t_init_c: null                      # null = start at ambient temperature
+
+# --- Battery ageing (models in config/params/degradation.yaml) ---------------
+degradation:
+  enabled: true
+  lifetime_method: extrapolate    # extrapolate: repeat year-1 operation | multi_year: re-simulate each year with the aged battery
+  eol_soh: 0.80                   # end of life = 80 % of rated capacity left
+  max_years: 25                   # stop searching for end of life after this many years
 
 # --- Tariff & billing ------------------------------------------------------
 tariff:

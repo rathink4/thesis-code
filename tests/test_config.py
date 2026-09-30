@@ -18,6 +18,8 @@ def test_scenario_resolves_library():
     cfg = load_config("pw3_lfp")
     assert cfg["battery"]["spec"]["chemistry"] == "LFP"
     assert cfg["battery"]["spec"]["p_discharge_max_kw"] == 11.5
+    assert cfg["battery"]["ageing"]["model"] == "naumann_lfp"
+    assert load_config()["battery"]["ageing"]["model"] == "schmalstieg_nmc"
 
 
 def test_spec_override():
@@ -28,3 +30,8 @@ def test_spec_override():
 def test_typo_rejected():
     with pytest.raises(ConfigError):
         load_config(None, ["battery.unitz=2"])
+
+
+def test_unknown_placement_rejected():
+    with pytest.raises(ConfigError):
+        load_config(None, ["battery.placement=roof"])

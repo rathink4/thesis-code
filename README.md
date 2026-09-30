@@ -96,7 +96,7 @@ pytest
 ```
 
 This runs the automatic checks. The last line should say something like
-**`23 passed`**. If anything says `failed`, stop here and fix it before going on.
+**`47 passed`**. If anything says `failed`, stop here and fix it before going on.
 
 ## Step 5 — Download the data
 
@@ -146,8 +146,8 @@ An annual difference within about ±10 % is fine.
 python run.py
 ```
 
-Simulates one year for three cases and prints each case's total yearly electricity bill for
-the four homes:
+Simulates one year for three cases, prints each case's total yearly electricity bill for the
+four homes, then works out how fast the battery wears out:
 
 - `grid_only`: no solar, no battery (the reference)
 - `pv_only`: shared solar panels, no battery
@@ -159,7 +159,27 @@ Expected output (your numbers should be close):
    grid_only    bill       44,469 AED
    pv_only      bill       26,949 AED
    brain_A      bill       27,152 AED
+[4/5] battery ageing (Schmalstieg et al. 2014 (NMC), outdoor_garage, extrapolate)
+   brain_A      year-1 capacity loss 13.56 % (calendar 2.17, cycle 11.39), mean battery temp 31.3 C, years to 80 % health: 2.0
 ```
+
+The ageing line says how much battery capacity is lost in the first year, split into
+*calendar* ageing (from time, heat and charge level) and *cycle* ageing (from use), and how
+many years until the battery is down to 80 % of its capacity.
+
+To compare battery types, placements and lifetime methods, run each of these and compare the
+`brain_A` ageing line:
+
+| Command | What changes | Expected ageing line (approx.) |
+|---|---|---|
+| `python run.py` | Powerwall 2 (NMC) in the garage | 13.6 % loss, 2.0 years |
+| `python run.py --scenario indoor` | battery indoors (cooler) | 12.7 % loss, 2.4 years |
+| `python run.py --scenario pw3_lfp` | Powerwall 3 (LFP) in the garage | 4.8 % loss, 17.4 years |
+| `python run.py --scenario pw3_lfp --set battery.placement=indoor` | Powerwall 3 indoors | 4.4 % loss, 20.4 years |
+| `python run.py --scenario pw3_lfp --set degradation.lifetime_method=multi_year` | re-simulates every year with the aged battery (slower) | 4.8 % loss, 16.6 years |
+
+Cooler placement and LFP chemistry should both give a longer life. The very short NMC life is
+a known issue with the lab-cell model, not a bug (see DECISIONS.md, D-013a).
 
 The results are saved in a new folder `results/<date-time>_default/`:
 
@@ -167,11 +187,24 @@ The results are saved in a new folder `results/<date-time>_default/`:
 |---|---|
 | `summary.json` | yearly totals for each case: bills per home, energy, savings |
 | `bills_<case>.csv` | monthly bill for each home |
-| `timeseries_<case>.csv` | hour-by-hour energy flows (8,760 rows) |
+| `timeseries_<case>.csv` | hour-by-hour energy flows (8,760 rows); battery cases also have battery temperature |
+| `lifetime_<case>.csv` | battery health at the end of each year until it reaches 80 % |
 | `home_loads_kw.csv` | hourly electricity demand of each home |
 | `config_used.yaml` | the exact settings used, so the run can be repeated |
 
-## Step 9 — Export files for HOMER Pro
+## Step 9 — Check the battery ageing models
+
+```powershell
+python scripts/plot_ageing.py
+```
+
+Draws both ageing models under lab-test conditions and saves
+`thesis/figures/ageing_model_check.png`. Open the image and check the curves behave as
+expected: hotter, fuller (higher SOC) and deeper-cycled batteries lose capacity faster. Then
+compare them with the measured results in the Schmalstieg (2014) and Naumann (2018, 2020)
+papers.
+
+## Step 10 — Export files for HOMER Pro
 
 ```powershell
 python scripts/export_homer.py

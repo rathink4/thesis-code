@@ -4,8 +4,8 @@ Sign convention (AC side):  p > 0 discharge (battery -> homes),  p < 0 charge.
 Internal energy update per step of dt hours:
     E_next = E + eta_c * P_charge * dt - P_discharge * dt / eta_d - self_discharge * E
 Limits: power (charge/discharge separately) and energy (soc_min..soc_max x capacity).
-`soh` (state of health, 1.0 = new) scales usable capacity; the degradation model
-will update it from Week 3.
+`soh` (state of health, 1.0 = new) scales usable capacity; sbess.lifetime sets it
+for each simulated year when degradation.lifetime_method = multi_year.
 """
 from __future__ import annotations
 
@@ -36,7 +36,8 @@ class Battery:
 
     # ---- construction from config ----------------------------------------
     @classmethod
-    def from_config(cls, cfg: dict) -> "Battery":
+    def from_config(cls, cfg: dict, soh: float = 1.0) -> "Battery":
+        """soh < 1 gives an aged battery (used by the multi-year lifetime method)."""
         b, spec = cfg["battery"], cfg["battery"]["spec"]
         n = b["units"]
         rte = spec["round_trip_efficiency"]
@@ -48,7 +49,7 @@ class Battery:
                    p_discharge_max_kw=n * spec["p_discharge_max_kw"],
                    eta_charge=eta, eta_discharge=eta,
                    soc_min=b["soc_min"], soc_max=b["soc_max"], soc_init=b["soc_init"],
-                   self_discharge_per_h=b["self_discharge_per_h"])
+                   self_discharge_per_h=b["self_discharge_per_h"], soh=soh)
 
     # ---- state --------------------------------------------------------------
     @property
