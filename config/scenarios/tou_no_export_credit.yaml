@@ -1,0 +1,5 @@
+# Scenario: hypothetical time-of-use tariff, exports earn nothing
+# (e.g. if a 4-plot shared array cannot be net metered under Shams Dubai — see DECISIONS D-006)
+tariff:
+  name: tou_hypothetical
+  export_mode: no_credit

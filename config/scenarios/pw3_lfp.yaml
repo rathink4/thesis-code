@@ -1,0 +1,3 @@
+# Scenario: LFP chemistry (Powerwall 3). Only keys that differ from default.yaml.
+battery:
+  model: powerwall3

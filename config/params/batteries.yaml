@@ -1,0 +1,27 @@
+# Battery datasheet values — PER UNIT. Every number carries its source.
+# Datasheet efficiency figures are "at 25 °C, 3.3 kW charge/discharge, beginning of life".
+
+powerwall2:
+  label: Tesla Powerwall 2 (AC)
+  chemistry: NMC                      # degradation model: Schmalstieg et al. (Week 3)
+  usable_kwh: 13.5                    # [SOURCE] Tesla Powerwall 2 AC datasheet (AU/NZ, 230 V)
+  p_charge_max_kw: 5.0                # [SOURCE] same — "5 kW (charge and discharge)", max continuous
+  p_discharge_max_kw: 5.0             # [SOURCE] same
+  round_trip_efficiency: 0.90         # [SOURCE] same — AC to battery to AC
+  operating_temp_c: [-20, 50]         # [SOURCE] same
+  recommended_temp_c: [0, 30]         # [SOURCE] same
+  warranty_years: 10                  # [SOURCE] same
+  source: "Tesla, Powerwall 2 AC Datasheet (Australia & New Zealand)"
+
+powerwall3:
+  label: Tesla Powerwall 3
+  chemistry: LFP                      # degradation model: Naumann et al. (Week 3)
+  usable_kwh: 13.5                    # [SOURCE] Tesla Powerwall 3 datasheet 2024 (NA) — nominal 13.5 kWh AC
+  p_charge_max_kw: 5.0                # [SOURCE] same — max continuous charge 5 kW AC
+  p_discharge_max_kw: 11.5            # [SOURCE] same — max continuous discharge 11.5 kW AC
+  round_trip_efficiency: 0.89         # [VERIFY] 89% solar-to-battery-to-home per UK datasheet summary
+  operating_temp_c: [-20, 50]         # [VERIFY]
+  recommended_temp_c: [0, 30]         # [VERIFY]
+  warranty_years: 10
+  source: "Tesla, Powerwall 3 Datasheet (2024, NA-EN); UK datasheet for efficiency"
+  note: "PW3 is DC-coupled to PV; modelled as AC-coupled here (see DECISIONS D-005)"

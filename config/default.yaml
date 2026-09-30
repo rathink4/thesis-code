@@ -1,0 +1,115 @@
+# =============================================================================
+# DEFAULT CONFIGURATION — every tunable number in the project lives here or in
+# config/params/*.yaml. Change a value here, in a scenario file, or on the
+# command line:  uv run run.py --set battery.units=2 --set tariff.name=tou_hypothetical
+# Tags:  [SOURCE] from a cited document   [ASSUMPTION] needs justifying in thesis
+#        [VERIFY] check before final results   [TEST] only for pipeline testing
+# See DECISIONS.md for the reasoning behind each choice.
+# =============================================================================
+
+project:
+  name: dubai-shared-bess
+  seed: 42                        # all randomness (load noise, synthetic weather) uses this
+
+site:
+  name: Dubai
+  latitude: 25.2048               # central Dubai
+  longitude: 55.2708
+  timezone: Asia/Dubai            # UTC+4, no daylight saving
+  altitude_m: 5
+
+simulation:
+  year: 2023                      # [VERIFY] see DECISIONS D-007 (day-ahead forecasts only exist from 2024)
+  timestep_h: 1.0
+  weather_source: nasa_power      # nasa_power | synthetic   ([TEST] synthetic = no internet needed)
+  lifetime_method: extrapolate    # extrapolate | multi_year  (used from Week 3)
+  energy_balance_tolerance_kwh: 1.0e-6
+
+# --- Data download settings --------------------------------------------------
+data:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  nasa_power:
+    base_url: https://power.larc.nasa.gov/api/temporal/hourly/point
+    community: RE
+    parameters: [ALLSKY_SFC_SW_DWN, ALLSKY_SFC_SW_DNI, ALLSKY_SFC_SW_DIFF, T2M, WS10M, RH2M]
+    timestamp_convention: start   # [VERIFY] 'start' = value covers hour starting at stamp; check_solar_noon() tests this
+  pvgis:
+    base_url: https://re.jrc.ec.europa.eu/api/v5_3/seriescalc
+    raddatabase: PVGIS-SARAH3
+    validation_year: 2023         # PVGIS hourly series currently ends in 2023 [VERIFY]
+  open_meteo:
+    historical_forecast_url: https://historical-forecast-api.open-meteo.com/v1/forecast
+    previous_runs_url: https://previous-runs-api.open-meteo.com/v1/forecast
+    hourly_variables: [temperature_2m, shortwave_radiation, direct_normal_irradiance,
+                       diffuse_radiation, cloud_cover, relative_humidity_2m, wind_speed_10m]
+    lead_days: 1                  # day-ahead forecast = value issued 24 h earlier
+
+# --- Solar PV (shared array, one AC connection) ----------------------------
+pv:
+  capacity_kwp: 32.0              # [ASSUMPTION] 4 villas x 8 kWp rooftop
+  tilt_deg: 25.0                  # [ASSUMPTION] near-latitude tilt
+  azimuth_deg: 180.0              # pvlib convention: 180 = south
+  albedo: 0.30                    # [ASSUMPTION] light desert/concrete surroundings
+  gamma_pdc_per_c: -0.0035        # [ASSUMPTION] typical mono-Si temp coefficient; replace with module datasheet
+  dc_ac_ratio: 1.1                # inverter AC rating = capacity_kwp / dc_ac_ratio
+  inverter_eta_nom: 0.96
+  transposition_model: haydavies
+  losses_pct:                     # passed to pvlib.pvwatts_losses; total also sent to PVGIS
+    soiling: 5.0                  # [ASSUMPTION] dusty climate, higher than pvlib default of 2
+    shading: 1.0
+    snow: 0.0
+    mismatch: 2.0
+    wiring: 2.0
+    connections: 0.5
+    lid: 1.5
+    nameplate_rating: 1.0
+    age: 0.0
+    availability: 1.0
+
+# --- Homes -------------------------------------------------------------------
+homes:
+  weekend_days: [5, 6]            # Mon=0 ... Sat=5, Sun=6 (UAE weekend since 2022)
+  thermal_lag_h: 3.0              # building thermal mass: cooling follows a lagged temperature
+  balance_temp_c: 20.0            # [ASSUMPTION] above this, AC load rises
+  noise_sigma: 0.10               # multiplicative hour-to-hour randomness
+  noise_autocorr: 0.7
+  profiles:                       # one entry per home; archetypes live in config/params/load_archetypes.yaml
+    - {name: home_1, archetype: working_couple,  annual_kwh: 22000, cooling_share: 0.65, base_kw: 0.35}
+    - {name: home_2, archetype: family_school,   annual_kwh: 30000, cooling_share: 0.68, base_kw: 0.45}
+    - {name: home_3, archetype: home_daytime,    annual_kwh: 38000, cooling_share: 0.70, base_kw: 0.55}
+    - {name: home_4, archetype: large_family,    annual_kwh: 46000, cooling_share: 0.70, base_kw: 0.70}
+  # [ASSUMPTION] annual_kwh and cooling_share must be justified against published UAE villa data
+
+# --- Battery -----------------------------------------------------------------
+battery:
+  enabled: true
+  model: powerwall2               # key into config/params/batteries.yaml  (powerwall2 | powerwall3)
+  units: 3                        # [ASSUMPTION] sized for ~4-home evening load; sweep later
+  soc_min: 0.0                    # fraction of usable energy (datasheet usable already excludes reserve)
+  soc_max: 1.0
+  soc_init: 0.5
+  efficiency_split: symmetric     # round-trip -> charge & discharge each sqrt(RTE)
+  self_discharge_per_h: 0.0       # [ASSUMPTION] not on datasheet
+  placement: outdoor_garage       # outdoor_garage | indoor  (used by thermal model, Week 3)
+  spec_override: {}               # override any datasheet field, e.g. {round_trip_efficiency: 0.88}
+
+# --- Tariff & billing ------------------------------------------------------
+tariff:
+  name: dewa_slab                 # key into config/params/tariffs.yaml  (dewa_slab | tou_hypothetical)
+  export_mode: net_metering       # net_metering | no_credit | feed_in   — see DECISIONS D-006
+  feed_in_aed_per_kwh: 0.0        # only used when export_mode = feed_in
+  spec_override: {}
+
+# --- How shared energy is split between homes for billing --------------------
+allocation:
+  method: pro_rata_hourly_load    # each hour, homes share grid import in proportion to their load
+  export_shares: [0.25, 0.25, 0.25, 0.25]   # who is credited for exported energy (ownership)
+
+# --- What run.py simulates ----------------------------------------------------
+run:
+  cases:
+    - {name: grid_only,  pv: false, battery: false, controller: none}
+    - {name: pv_only,    pv: true,  battery: false, controller: none}
+    - {name: brain_A,    pv: true,  battery: true,  controller: rule_based}
+  results_dir: results

@@ -1,0 +1,33 @@
+# Tariffs. Prices in AED/kWh (1 AED = 100 fils).
+
+dewa_slab:
+  type: slab
+  label: DEWA residential slab tariff
+  # [SOURCE] DEWA website, "Slab Tariff" page — residential electricity, per month
+  slabs:                       # [upper_kwh_of_slab, price_aed_per_kwh]; null = no upper limit
+    - [2000, 0.23]
+    - [4000, 0.28]
+    - [6000, 0.32]
+    - [null, 0.38]
+  fuel_surcharge_aed_per_kwh: 0.06   # [SOURCE] DEWA (Sept 2024 value) — [VERIFY] varies monthly
+  vat: 0.05                          # [SOURCE] DEWA: 5% VAT applies
+  fixed_aed_per_month: 0.0           # meter service charge: same under every brain, so excluded
+  # Net metering [SOURCE] Shams Dubai: exported kWh offsets imported kWh at the customer's
+  # own slab rate; monthly settlement; surplus rolls forward; no cash payment.
+  net_metering_carry_forward: true
+
+tou_hypothetical:
+  type: tou
+  label: Hypothetical time-of-use tariff (NOT a DEWA tariff — policy scenario)
+  # [ASSUMPTION] Evening peak after PV output falls. Prices scaled so the four default
+  # homes pay about the same grid-only bill as under DEWA slabs (revenue-neutral), so the
+  # comparison is about price SHAPE, not price LEVEL. [VERIFY] recheck with real weather.
+  periods:                     # hours are local clock hours, [start, end) — cover 0..24 exactly once
+    - {name: off_peak, hours: [0, 7],   price: 0.16}
+    - {name: shoulder, hours: [7, 16],  price: 0.22}
+    - {name: peak,     hours: [16, 22], price: 0.35}
+    - {name: shoulder, hours: [22, 24], price: 0.22}
+  fuel_surcharge_aed_per_kwh: 0.06
+  vat: 0.05
+  fixed_aed_per_month: 0.0
+  net_metering_carry_forward: true   # under TOU, net metering is valued in AED (export x hourly price)

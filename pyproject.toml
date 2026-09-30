@@ -1,0 +1,43 @@
+[project]
+name = "sbess"
+version = "0.1.0"
+description = "Shared residential PV + battery simulation for Dubai (MSc dissertation)"
+requires-python = ">=3.10"
+dependencies = [
+    # Weeks 1-2
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "pvlib>=0.11",
+    "pyyaml>=6.0",
+    "requests>=2.31",
+    "matplotlib>=3.8",
+    # Week 3 (degradation)
+    "rainflow>=3.2",
+]
+
+# Installed with `uv sync --group <name>` or `uv sync --all-groups`.
+# `dev` is installed by a plain `uv sync`.
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+forecast = [          # Weeks 4-5
+    "scikit-learn>=1.4",
+    "xgboost>=2.0",
+    "torch>=2.2",
+]
+mpc = [               # Weeks 6-7
+    "cvxpy>=1.5",
+    "highspy>=1.7",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

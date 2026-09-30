@@ -1,0 +1,3 @@
+# Scenario: battery installed indoors (air-conditioned space). Used by the thermal model from Week 3.
+battery:
+  placement: indoor
